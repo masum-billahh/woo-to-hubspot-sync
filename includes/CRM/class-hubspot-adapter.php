@@ -11,9 +11,11 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
 
     private string $token;
     private string $base = 'https://api.hubapi.com';
+	private \WC_Logger_Interface $logger;
 
     public function __construct( string $token ) {
         $this->token = $token;
+		$this->logger = wc_get_logger();
     }
 
     // ──────────────────────────────────────────────
@@ -41,45 +43,59 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
     // ──────────────────────────────────────────────
 
     public function get_primary_company( string $contact_id ): ?array {
-        $res = $this->get(
-            "/crm/v3/objects/contacts/{$contact_id}/associations/companies",
-            [ 'limit' => 10 ]
-        );
+		$res = $this->get(
+			"/crm/v3/objects/contacts/{$contact_id}/associations/companies",
+			[ 'limit' => 10 ]
+		);
 
-        $results = $res['results'] ?? [];
-        if ( empty( $results ) ) return null;
+		$this->logger->info(
+			'[HS Sync] Company assoc raw: ' . wp_json_encode( $res ), 
+			[ 'source' => 'hubspot-sync' ] 
+		);
 
-        // The primary company has associationCategory HUBSPOT_DEFINED and typeId 1
-        $primary_id = null;
-        foreach ( $results as $assoc ) {
-            foreach ( $assoc['associationTypes'] ?? [] as $type ) {
-                if (
-                    ( $type['category'] ?? '' ) === 'HUBSPOT_DEFINED' &&
-                    ( $type['typeId']   ?? 0  ) === 1
-                ) {
-                    $primary_id = $assoc['toObjectId'];
-                    break 2;
-                }
-            }
-        }
-        // Fallback: first association
-        if ( ! $primary_id ) {
-            $primary_id = $results[0]['toObjectId'] ?? null;
-        }
-        if ( ! $primary_id ) return null;
+		$results = $res['results'] ?? [];
+		if ( empty( $results ) ) return null;
 
-        $company = $this->get( "/crm/v3/objects/companies/{$primary_id}", [
-            'properties' => 'hubspot_owner_id,name',
-        ] );
+		// Handle both v3 flat format and v4 nested format
+		$primary_id = null;
+		foreach ( $results as $assoc ) {
+			// New v4 format
+			if ( isset( $assoc['toObjectId'] ) ) {
+				foreach ( $assoc['associationTypes'] ?? [] as $type ) {
+					if (
+						( $type['category'] ?? '' ) === 'HUBSPOT_DEFINED' &&
+						( $type['typeId']   ?? 0  ) === 1
+					) {
+						$primary_id = $assoc['toObjectId'];
+						break 2;
+					}
+				}
+				// Fallback for v4 without matching typeId
+				if ( ! $primary_id ) {
+					$primary_id = $assoc['toObjectId'];
+				}
+			}
+			// Old v3 flat format — just grab the id directly
+			elseif ( isset( $assoc['id'] ) ) {
+				$primary_id = $assoc['id'];
+				break;
+			}
+		}
 
-        if ( empty( $company['id'] ) ) return null;
+		if ( ! $primary_id ) return null;
 
-        return [
-            'id'       => $company['id'],
-            'name'     => $company['properties']['name'] ?? '',
-            'owner_id' => $company['properties']['hubspot_owner_id'] ?? null,
-        ];
-    }
+		$company = $this->get( "/crm/v3/objects/companies/{$primary_id}", [
+			'properties' => 'hubspot_owner_id,name',
+		] );
+
+		if ( empty( $company['id'] ) ) return null;
+
+		return [
+			'id'       => $company['id'],
+			'name'     => $company['properties']['name'] ?? '',
+			'owner_id' => $company['properties']['hubspot_owner_id'] ?? null,
+		];
+	}
 
     public function update_company( string $company_id, array $properties ): bool {
         $res = $this->patch( "/crm/v3/objects/companies/{$company_id}", [
