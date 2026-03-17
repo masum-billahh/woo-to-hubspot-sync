@@ -24,6 +24,7 @@ class Settings {
     public function register_settings(): void {
         register_setting( 'wc_hs_sync', 'wc_hs_sync_token',    [ 'sanitize_callback' => 'sanitize_text_field' ] );
         register_setting( 'wc_hs_sync', 'wc_hs_sync_pipeline', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+		register_setting( 'wc_hs_sync', 'wc_hs_sync_stage_map' );
     }
 
     public function render_page(): void {
@@ -49,6 +50,28 @@ class Settings {
                                    class="regular-text" />
                         </td>
                     </tr>
+					
+					<tr>
+						<th>Order Status → Deal Stage Mapping</th>
+						<td>
+							<?php
+							$stage_map = \WC_HS_Sync\Settings::get_stage_map();
+							$statuses  = wc_get_order_statuses(); 
+							foreach ( $statuses as $slug => $label ) :
+								$key = str_replace( 'wc-', '', $slug ); // strip 'wc-' prefix
+								$val = $stage_map[ $key ] ?? '';
+							?>
+							<div style="margin-bottom:6px;">
+								<label style="display:inline-block;width:160px;"><?php echo esc_html( $label ); ?></label>
+								<input type="text"
+									   name="wc_hs_sync_stage_map[<?php echo esc_attr( $key ); ?>]"
+									   value="<?php echo esc_attr( $val ); ?>"
+									   placeholder="HubSpot stage ID"
+									   style="width:260px;" />
+							</div>
+							<?php endforeach; ?>
+						</td>
+					</tr>
                 </table>
                 <?php submit_button(); ?>
             </form>
