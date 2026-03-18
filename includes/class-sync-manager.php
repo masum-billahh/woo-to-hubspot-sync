@@ -23,9 +23,9 @@ class Sync_Manager {
     }
 
     public function register_hooks(): void {
-        // Triggered for new orders and status changes
-        //add_action( 'woocommerce_checkout_order_processed',     [ $this, 'handle_order_created' ], 20 );
+        // Triggered for status changes
         add_action( 'woocommerce_order_status_changed',         [ $this, 'handle_status_change' ], 20, 3 );
+		add_action( 'wc_hs_sync_process_order', [ $this, 'handle_scheduled_sync' ] );
 
         // HPOS deletion hook (and classic post deletion fallback)
         add_action( 'woocommerce_before_delete_order',          [ $this, 'handle_order_deleted' ] );
@@ -41,8 +41,25 @@ class Sync_Manager {
     }
 
     public function handle_status_change( int $order_id, string $from, string $to ): void {
-        $this->sync_order( $order_id );
-    }
+		if ( ! function_exists( 'as_schedule_single_action' ) ) {
+			// Action Scheduler not available — fall back to direct sync
+			$this->sync_order( $order_id );
+			return;
+		}
+
+		// Cancel any pending job for this order to avoid duplicates
+		as_unschedule_all_actions( 'wc_hs_sync_process_order', [ $order_id ], 'wc-hs-sync' );
+
+		// Schedule a new job 2 minutes from now
+		as_schedule_single_action( time() + 120, 'wc_hs_sync_process_order', [ $order_id ], 'wc-hs-sync' );
+
+		$this->log( 'info', "Scheduled sync for order {$order_id} in 2 minutes." );
+	}
+	
+	public function handle_scheduled_sync( int $order_id ): void {
+		$this->log( 'info', "Action Scheduler running sync for order {$order_id}." );
+		$this->sync_order( $order_id );
+	}
 
     public function handle_order_deleted( $order_id ): void {
         $this->delete_deal_for_order( (int) $order_id );
