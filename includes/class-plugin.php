@@ -20,6 +20,9 @@ class Plugin {
     private function __construct() {
         // Settings page
         new Admin\Settings();
+        
+         // Historical importer (Import tab + AJAX handlers)
+        new Admin\Historical_Importer();
 
         // Order event hooks → Sync_Manager
         $sync = new Sync_Manager(

@@ -41,6 +41,10 @@ class Settings {
                    class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
                     ⚙️ Settings
                 </a>
+                <a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-hubspot-sync&tab=import' ) ); ?>"
+                   class="nav-tab <?php echo $active_tab === 'import' ? 'nav-tab-active' : ''; ?>">
+                    📦 Import Orders
+                </a>
                 <a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-hubspot-sync&tab=logs' ) ); ?>"
                    class="nav-tab <?php echo $active_tab === 'logs' ? 'nav-tab-active' : ''; ?>">
                     📋 Logs
@@ -51,6 +55,8 @@ class Settings {
                 <?php
                 if ( $active_tab === 'logs' ) {
                     ( new Log_Viewer() )->render();
+                } elseif ( $active_tab === 'import' ) {
+                    ( new Historical_Importer() )->render();
                 } else {
                     $this->render_settings_tab();
                 }
