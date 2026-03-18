@@ -93,15 +93,29 @@ class Order_Extractor {
 
     private static function build_order_text( \WC_Order $order, array $items ): string {
         $lines = [];
-        foreach ( $items as $item ) {
-            $lines[] = sprintf(
-                "- %s | SKU: %s | Qty: %d | Price: %s",
-                $item['name'],
-                $item['sku'] ?: 'N/A',
-                $item['qty'],
-                html_entity_decode( wp_strip_all_tags( wc_price( $item['price'] ) ) )
-            );
-        }
+		$i = 1;
+
+		foreach ( $items as $item ) {
+			$lines[] = sprintf(
+				"Product %d:\nName: %s\nSKU: %s\nQty: %d\nPrice: %s",
+				$i++,
+				$item['name'],
+				$item['sku'] ?: 'N/A',
+				$item['qty'],
+				html_entity_decode( wp_strip_all_tags( wc_price( $item['price'] ) ) )
+			);
+		}
+		
+		$shipping_items = $order->get_shipping_methods();
+		if ( ! empty( $shipping_items ) ) {
+			$shipping_total = $order->get_shipping_total();
+
+			$lines[] = sprintf(
+				"Shipping:\nMethod: %s\nCost: %s",
+				reset( $shipping_items )->get_name(),
+				html_entity_decode( wp_strip_all_tags( wc_price( $shipping_total ) ) )
+			);
+		}
 
         $completed_at = $order->get_date_completed();
         $shipping_name = trim( $order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name() );
@@ -114,8 +128,8 @@ class Order_Extractor {
             'Language:    ' . $language,
             'Batch:       ' . ( $batch_number ?: 'N/A' ),
             '',
-            'Products:',
-            implode( "\n", $lines ),
+            'Ordered Items:',
+            implode( "\n\n", $lines ),
             '',
             'Order Total: ' . html_entity_decode( wp_strip_all_tags( wc_price( $order->get_total() ) ) ),
         ] );

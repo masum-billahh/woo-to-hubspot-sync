@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WooCommerce HubSpot Sync
- * Plugin URI:  https://upwork.com
+ * Plugin URI:  https://www.upwork.com/freelancers/~01a6e65817b86d4589?mp_source=share
  * Description: Syncs WooCommerce orders to HubSpot CRM
  * Version:     1.0.0
  * Author:      Masum Billah
