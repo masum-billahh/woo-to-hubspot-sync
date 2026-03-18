@@ -131,11 +131,17 @@ class Sync_Manager {
             $this->log( 'info', "Updated deal {$deal_id} for order {$order_id}." );
         } else {
             $deal_id = $this->crm->create_deal( $deal_props );
-            if ( ! $deal_id ) {
-                $this->log( 'error', "Failed to create deal for order {$order_id}." );
-                return;
-            }
-            $this->log( 'info', "Created deal {$deal_id} for order {$order_id}." );
+			if ( ! $deal_id ) {
+				$this->log( 'error', "Failed to create deal for order {$order_id}." );
+				return;
+			}
+			// Save HubSpot deal ID to order meta for future reference
+			$order = wc_get_order( $order_id );
+			if ( $order ) {
+				$order->update_meta_data( '_hs_deal_id', $deal_id );
+				$order->save();
+			}
+			$this->log( 'info', "Created deal {$deal_id} for order {$order_id}." );
         }
 
         // 7. Associate deal → contact
@@ -152,6 +158,15 @@ class Sync_Manager {
         }
 
         $this->log( 'info', "Sync complete for order {$order_id}." );
+		// Add order note
+		$order = wc_get_order( $order_id );
+		if ( $order ) {
+			$order->add_order_note(
+				sprintf( 'HubSpot sync complete. Deal ID: %s', $deal_id ),
+				false, // not a customer note
+				false  // not added by customer
+			);
+		}
     }
 
     private function delete_deal_for_order( int $order_id ): void {
