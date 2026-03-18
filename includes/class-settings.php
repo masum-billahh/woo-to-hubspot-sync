@@ -16,6 +16,10 @@ class Settings {
         return (string) get_option( 'wc_hs_sync_pipeline', 'default' );
     }
 
+    public static function get_notification_email(): string {
+        return (string) get_option( 'wc_hs_sync_notify_email', '' );
+    }
+    
     /**
      * Returns a map of WooCommerce status → HubSpot deal stage ID.
      * Editable via Settings UI.

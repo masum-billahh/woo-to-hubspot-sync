@@ -24,6 +24,7 @@ class Settings {
     public function register_settings(): void {
         register_setting( 'wc_hs_sync', 'wc_hs_sync_token',    [ 'sanitize_callback' => 'sanitize_text_field' ] );
         register_setting( 'wc_hs_sync', 'wc_hs_sync_pipeline', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'wc_hs_sync', 'wc_hs_sync_notify_email', [ 'sanitize_callback' => 'sanitize_email' ] );
         register_setting( 'wc_hs_sync', 'wc_hs_sync_stage_map' );
     }
 
@@ -39,15 +40,15 @@ class Settings {
             <nav class="nav-tab-wrapper woo-nav-tab-wrapper" style="margin-bottom:0;">
                 <a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-hubspot-sync&tab=settings' ) ); ?>"
                    class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
-                    ⚙️ Settings
+                    Settings
                 </a>
                 <a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-hubspot-sync&tab=import' ) ); ?>"
                    class="nav-tab <?php echo $active_tab === 'import' ? 'nav-tab-active' : ''; ?>">
-                    📦 Import Orders
+                    Import Orders
                 </a>
                 <a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-hubspot-sync&tab=logs' ) ); ?>"
                    class="nav-tab <?php echo $active_tab === 'logs' ? 'nav-tab-active' : ''; ?>">
-                    📋 Logs
+                    Logs
                 </a>
             </nav>
 
@@ -90,6 +91,19 @@ class Settings {
                                class="regular-text" />
                         <p class="description">
                             The internal HubSpot pipeline ID (e.g. <code>ecommerce</code>).
+                        </p>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <th>Failure Notification Email</th>
+                    <td>
+                        <input type="email" name="wc_hs_sync_notify_email"
+                               value="<?php echo esc_attr( get_option( 'wc_hs_sync_notify_email' ) ); ?>"
+                               class="regular-text" placeholder="e.g. board+card@trello.com" />
+                        <p class="description">
+                            Sync failures will be emailed here. Leave blank to disable. 
+                            Historical import errors are never emailed.
                         </p>
                     </td>
                 </tr>

@@ -15,6 +15,7 @@ class Sync_Manager {
     private CRM_Adapter_Interface $crm;
     private Order_Extractor $extractor;
     private \WC_Logger_Interface $logger;
+    private bool $silent = false;
 
     public function __construct( CRM_Adapter_Interface $crm, Order_Extractor $extractor ) {
         $this->crm       = $crm;
@@ -38,6 +39,10 @@ class Sync_Manager {
 
     public function handle_order_created( int $order_id ): void {
         $this->sync_order( $order_id );
+    }
+    
+    public function set_silent( bool $silent ): void {
+        $this->silent = $silent;
     }
 
     public function handle_status_change( int $order_id, string $from, string $to ): void {
@@ -184,5 +189,21 @@ class Sync_Manager {
 
     private function log( string $level, string $message ): void {
         $this->logger->$level( "[HS Sync] {$message}", [ 'source' => 'hubspot-sync' ] );
+    
+        if ( $level === 'error' && ! $this->silent ) {
+            $this->maybe_send_failure_email( $message );
+        }
     }
+    
+    private function maybe_send_failure_email( string $message ): void {
+        $email = Settings::get_notification_email();
+        if ( ! $email ) return;
+    
+        wp_mail(
+            $email,
+            '[WooCommerce HubSpot Sync] Sync failure',
+            "A sync error occurred:\n\n" . $message . "\n\nCheck the sync logs in WooCommerce → HubSpot Sync → Logs for details."
+        );
+    }
+
 }

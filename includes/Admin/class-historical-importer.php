@@ -390,11 +390,13 @@ class Historical_Importer {
 	 * CRM adapter injected here — swap adapter class to change CRM.
 	 */
 	private function make_sync_manager(): Sync_Manager {
-		return new Sync_Manager(
-			new HubSpot_Adapter( Settings::get_token() ),
-			new Order_Extractor()
-		);
-	}
+        $manager = new Sync_Manager(
+            new HubSpot_Adapter( Settings::get_token() ),
+            new Order_Extractor()
+        );
+        $manager->set_silent( true ); // never email during historical import
+        return $manager;
+    }
 
 	private function fetch_all_order_ids(): array {
 		return wc_get_orders( [
