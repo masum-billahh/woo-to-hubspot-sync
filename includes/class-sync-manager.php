@@ -88,11 +88,33 @@ class Sync_Manager {
         }
 
         // 1. Find contact via _shipping_email
-        $contact_id = $this->crm->find_contact( $data['contact_email'] );
-        if ( ! $contact_id ) {
-            $this->log( 'warning', "No HubSpot contact for email {$data['contact_email']} (order {$order_id})." );
-            return;
-        }
+        // 1. Find or create contact via _shipping_email ONLY
+		$contact_id = $this->crm->find_contact( $data['contact_email'] );
+
+		$contact_props = array_filter( [
+			'email'      => $data['contact_email'],
+			'firstname'  => $data['contact_first'],
+			'phone'      => $data['contact_phone'],
+			// Shipping address as contact address
+			'address' 	 => trim($data['shipping_address_1'] . ' ' . $data['shipping_address_2']),
+			'city'       => $data['shipping_city'],
+			'zip'        => $data['shipping_postcode'],
+			'state'      => $data['shipping_state'],
+			'country'    => $data['shipping_country'],
+		] );
+
+		if ( ! $contact_id ) {
+			$contact_id = $this->crm->create_contact( $contact_props );
+			if ( ! $contact_id ) {
+				$this->log( 'error', "Failed to create HubSpot contact for {$data['contact_email']} (order {$data['order_id']})." );
+				return;
+			}
+			$this->log( 'info', "Created contact {$contact_id} for {$data['contact_email']}." );
+		} else {
+			// Always update with latest order data — shipping email is source of truth
+			$this->crm->update_contact( $contact_id, $contact_props );
+			$this->log( 'info', "Updated contact {$contact_id} for order {$data['order_id']}." );
+		}
 
         // 2. Get primary company
         $company = $this->crm->get_primary_company( $contact_id );
@@ -140,12 +162,15 @@ class Sync_Manager {
 				$this->log( 'error', "Failed to create deal for order {$order_id}." );
 				return;
 			}
+			//REMOVE THE COMMENT LATER
 			// Save HubSpot deal ID to order meta for future reference
+			/*
 			$order = wc_get_order( $order_id );
 			if ( $order ) {
 				$order->update_meta_data( '_hs_deal_id', $deal_id );
 				$order->save();
 			}
+			*/
 			$this->log( 'info', "Created deal {$deal_id} for order {$order_id}." );
         }
 
@@ -163,7 +188,9 @@ class Sync_Manager {
         }
 
         $this->log( 'info', "Sync complete for order {$order_id}." );
+		//COMMENT ORDER NOTES FOR TESTING< REMOVE THIS COMMENT later
 		// Add order note
+		/*
 		$order = wc_get_order( $order_id );
 		if ( $order ) {
 			$order->add_order_note(
@@ -172,6 +199,7 @@ class Sync_Manager {
 				false  // not added by customer
 			);
 		}
+		*/
     }
 
     private function delete_deal_for_order( int $order_id ): void {

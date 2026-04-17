@@ -78,8 +78,8 @@ class Order_Extractor {
             'completed_timestamp' => $completed_at ? $completed_at->getTimestamp() * 1000 : null,
 
             // Company properties from order meta
-            'box_size'         => $order->get_meta( '_shipping_box', true ),
-            'permanent_box'    => $order->get_meta( '_send_collection_box', true ),
+            'box_size'         => $order->get_meta( '_shipping_shipping_box', true ),
+            'permanent_box'    => $order->get_meta( '_shipping_send_collection_box', true ),
             'internal_note'    => $order->get_meta( '_shipping_interne_notiz', true ),
 
             // Language
@@ -88,6 +88,14 @@ class Order_Extractor {
 
             // Batch number
             'batch_number'     => $order->get_meta( '_batch_number', true ),
+			
+			// address
+			'shipping_address_1' => $order->get_shipping_address_1(),
+			'shipping_address_2' => $order->get_shipping_address_2(),
+			'shipping_city'      => $order->get_shipping_city(),
+			'shipping_postcode'  => $order->get_shipping_postcode(),
+			'shipping_state'     => $order->get_shipping_state(),
+			'shipping_country'   => $order->get_shipping_country(),
         ];
     }
 

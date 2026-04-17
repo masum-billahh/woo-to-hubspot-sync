@@ -79,7 +79,7 @@ class Settings {
                                value="<?php echo esc_attr( get_option( 'wc_hs_sync_token' ) ); ?>"
                                class="regular-text" autocomplete="off" />
                         <p class="description">
-                            Generate at HubSpot → Settings → Integrations → Private Apps.
+                            Generate at HubSpot → Development → Legacy apps → Inside legacy apps → Auth → Access token
                         </p>
                     </td>
                 </tr>

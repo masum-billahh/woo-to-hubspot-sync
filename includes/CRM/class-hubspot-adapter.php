@@ -37,6 +37,20 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
 
         return $res['results'][0]['id'] ?? null;
     }
+    
+    public function create_contact( array $properties ): ?string {
+		$res = $this->post( '/crm/v3/objects/contacts', [
+			'properties' => $properties,
+		] );
+		return $res['id'] ?? null;
+	}
+
+	public function update_contact( string $contact_id, array $properties ): bool {
+		$res = $this->patch( "/crm/v3/objects/contacts/{$contact_id}", [
+			'properties' => $properties,
+		] );
+		return ! empty( $res['id'] );
+	}
 
     // ──────────────────────────────────────────────
     // Company

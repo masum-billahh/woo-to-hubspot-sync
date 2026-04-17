@@ -13,6 +13,16 @@ interface CRM_Adapter_Interface {
      * Find a contact by email; returns CRM contact ID or null.
      */
     public function find_contact( string $email ): ?string;
+	
+	/**
+	 * Create a contact; returns CRM contact ID or null.
+	 */
+	public function create_contact( array $properties ): ?string;
+
+	/**
+	 * Update properties on an existing contact.
+	 */
+	public function update_contact( string $contact_id, array $properties ): bool;
 
     /**
      * Get the primary company associated with a contact.
