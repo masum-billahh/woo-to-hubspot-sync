@@ -126,6 +126,15 @@ class Sync_Manager {
                 'permanent_box'  => $data['permanent_box']  ?: null,
                 'internal_note'  => $data['internal_note']  ?: null,
                 'billing_email'  => $data['billing_email']  ?: null, // only if different from shipping
+				'address'          => trim($data['billing_address_1'] . ' ' . $data['billing_address_2']),
+				'city'             => $data['billing_city'],
+				'zip'              => $data['billing_postcode'],
+				
+				//custom properties in company
+				'shipping_address' => trim($data['shipping_address_1'] . ' ' . $data['shipping_address_2']),
+				'shipping_city'    => $data['shipping_city'],
+				'shipping_zip'     => $data['shipping_postcode'],
+				
             ] );
 
             if ( $company_props ) {

@@ -89,13 +89,19 @@ class Order_Extractor {
             // Batch number
             'batch_number'     => $order->get_meta( '_batch_number', true ),
 			
-			// address
+			//shipping address
 			'shipping_address_1' => $order->get_shipping_address_1(),
 			'shipping_address_2' => $order->get_shipping_address_2(),
 			'shipping_city'      => $order->get_shipping_city(),
 			'shipping_postcode'  => $order->get_shipping_postcode(),
 			'shipping_state'     => $order->get_shipping_state(),
 			'shipping_country'   => $order->get_shipping_country(),
+			
+			//billing address
+			'billing_address_1'  => $order->get_billing_address_1(),
+			'billing_address_2'  => $order->get_billing_address_2(),
+			'billing_city'       => $order->get_billing_city(),
+			'billing_postcode'   => $order->get_billing_postcode(),
         ];
     }
 
