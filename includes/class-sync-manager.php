@@ -101,6 +101,13 @@ class Sync_Manager {
 			'zip'        => $data['shipping_postcode'],
 			'state'      => $data['shipping_state'],
 			'country'    => $data['shipping_country'],
+			
+			//custom properties in contact
+			'shipping_phone' => $data['shipping_phone'],
+			'billing_address' => trim($data['billing_address_1'] . ' ' . $data['billing_address_2']),
+			'billing_city'    => $data['billing_city'],
+			'billing_zip'     => $data['billing_postcode'],
+			
 		] );
 
 		if ( ! $contact_id ) {
@@ -129,6 +136,7 @@ class Sync_Manager {
 				'address'          => trim($data['billing_address_1'] . ' ' . $data['billing_address_2']),
 				'city'             => $data['billing_city'],
 				'zip'              => $data['billing_postcode'],
+				//'phone'      	   => $data['contact_phone'],
 				
 				//custom properties in company
 				'shipping_address' => trim($data['shipping_address_1'] . ' ' . $data['shipping_address_2']),

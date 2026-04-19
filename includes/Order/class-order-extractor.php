@@ -96,6 +96,7 @@ class Order_Extractor {
 			'shipping_postcode'  => $order->get_shipping_postcode(),
 			'shipping_state'     => $order->get_shipping_state(),
 			'shipping_country'   => $order->get_shipping_country(),
+			'shipping_phone' 	 => $order->get_shipping_phone(),
 			
 			//billing address
 			'billing_address_1'  => $order->get_billing_address_1(),
