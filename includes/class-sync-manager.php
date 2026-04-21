@@ -94,19 +94,14 @@ class Sync_Manager {
 		$contact_props = array_filter( [
 			'email'      => $data['contact_email'],
 			'firstname'  => $data['contact_first'],
-			'phone'      => $data['contact_phone'],
+			'phone'      => $data['shipping_phone'], // shipping phone is the contact phone
 			// Shipping address as contact address
-			'address' 	 => trim($data['shipping_address_1'] . ' ' . $data['shipping_address_2']),
+			'address'    => $data['shipping_address_1'],
+			'address2'   => $data['shipping_address_2'],
 			'city'       => $data['shipping_city'],
 			'zip'        => $data['shipping_postcode'],
 			'state'      => $data['shipping_state'],
 			'country'    => $data['shipping_country'],
-			
-			//custom properties in contact
-			'shipping_phone' => $data['shipping_phone'],
-			'billing_address' => trim($data['billing_address_1'] . ' ' . $data['billing_address_2']),
-			'billing_city'    => $data['billing_city'],
-			'billing_zip'     => $data['billing_postcode'],
 			
 		] );
 
@@ -128,22 +123,31 @@ class Sync_Manager {
 
         // 3. Update company properties if company exists
         if ( $company ) {
+			
+			// Convert permanent_box meta value to HubSpot boolean string
+			$permanent_box = $data['permanent_box'];
+			if ( $permanent_box !== '' && $permanent_box !== null ) {
+				$permanent_box = ( $permanent_box == '1' ) ? 'true' : 'false';
+			} else {
+				$permanent_box = null;
+			}
+			
             $company_props = array_filter( [
-                'box_size'       => $data['box_size']       ?: null,
-                'permanent_box'  => $data['permanent_box']  ?: null,
-                'internal_note'  => $data['internal_note']  ?: null,
-                'billing_email'  => $data['billing_email']  ?: null, // only if different from shipping
-				'address'          => trim($data['billing_address_1'] . ' ' . $data['billing_address_2']),
-				'city'             => $data['billing_city'],
-				'zip'              => $data['billing_postcode'],
-				//'phone'      	   => $data['contact_phone'],
-				
-				//custom properties in company
-				'shipping_address' => trim($data['shipping_address_1'] . ' ' . $data['shipping_address_2']),
-				'shipping_city'    => $data['shipping_city'],
-				'shipping_zip'     => $data['shipping_postcode'],
-				
-            ] );
+				'box_size'        => $data['box_size']      ?: null,
+				'mehrwegkiste'    => $permanent_box,
+				'internal_note'   => $data['internal_note'] ?: null,
+				'billing_email'   => $data['billing_email'] ?: null,
+				// Shipping address → HubSpot standard company address fields
+				'address'         => $data['shipping_address_1'],
+				'address2'        => $data['shipping_address_2'],
+				'city'            => $data['shipping_city'],
+				'zip'             => $data['shipping_postcode'],
+				// Billing address → custom company properties
+				'billing_address'  => $data['billing_address_1'],
+				'billing_address2' => $data['billing_address_2'],
+				'billing_city'     => $data['billing_city'],
+				'billing_zip'      => $data['billing_postcode'],
+			], fn( $v ) => $v !== null && $v !== '' );
 
             if ( $company_props ) {
                 $this->crm->update_company( $company['id'], $company_props );
@@ -179,15 +183,14 @@ class Sync_Manager {
 				$this->log( 'error', "Failed to create deal for order {$order_id}." );
 				return;
 			}
-			//REMOVE THE COMMENT LATER
 			// Save HubSpot deal ID to order meta for future reference
-			/*
+			
 			$order = wc_get_order( $order_id );
 			if ( $order ) {
 				$order->update_meta_data( '_hs_deal_id', $deal_id );
 				$order->save();
 			}
-			*/
+			
 			$this->log( 'info', "Created deal {$deal_id} for order {$order_id}." );
         }
 
@@ -205,9 +208,8 @@ class Sync_Manager {
         }
 
         $this->log( 'info', "Sync complete for order {$order_id}." );
-		//COMMENT ORDER NOTES FOR TESTING< REMOVE THIS COMMENT later
 		// Add order note
-		/*
+		
 		$order = wc_get_order( $order_id );
 		if ( $order ) {
 			$order->add_order_note(
@@ -216,7 +218,7 @@ class Sync_Manager {
 				false  // not added by customer
 			);
 		}
-		*/
+		
     }
 
     private function delete_deal_for_order( int $order_id ): void {

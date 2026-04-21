@@ -71,6 +71,7 @@ class Settings {
         ?>
         <form method="post" action="options.php">
             <?php settings_fields( 'wc_hs_sync' ); ?>
+			
             <table class="form-table">
                 <tr>
                     <th>HubSpot Private App Token</th>
@@ -133,7 +134,54 @@ class Settings {
                     </td>
                 </tr>
             </table>
-            <?php submit_button(); ?>
+            <?php submit_button(); ?>		
+						
+			 <!-- ── Required HubSpot Properties Note ── -->
+			<div style="background:#f0f6fc;border-left:4px solid #2271b1;padding:14px 18px;margin-bottom:20px;border-radius:0 4px 4px 0;max-width:700px;">
+				<strong style="display:block;margin-bottom:10px;font-size:13px;color:#1d2327;">
+					Required HubSpot Properties
+				</strong>
+				<p style="margin:0 0 10px;color:#50575e;font-size:13px;">
+					Before using this plugin, create the following custom properties in HubSpot:
+				</p>
+
+				<strong style="font-size:12px;text-transform:uppercase;color:#2271b1;letter-spacing:.04em;">Deal Properties</strong>
+				<ul style="margin:4px 0 10px 16px;font-size:13px;color:#50575e;">
+					<li><code>wc_order_id</code> — Single-line text</li>
+					<li><code>order_items</code> — Multi-line text</li>
+				</ul>
+
+				<strong style="font-size:12px;text-transform:uppercase;color:#2271b1;letter-spacing:.04em;">Contact Properties</strong>
+				<ul style="margin:4px 0 10px 16px;font-size:13px;color:#50575e;">
+					<li><code>shipping_phone</code> — Phone</li>
+				</ul>
+
+				<strong style="font-size:12px;text-transform:uppercase;color:#2271b1;letter-spacing:.04em;">Company Properties</strong>
+				<ul style="margin:4px 0 0 16px;font-size:13px;color:#50575e;">
+					<li><code>box_size</code> — Single-line text</li>
+					<li><code>mehrwegkiste</code> "permanent_box" — Boolean checkbox</li>
+					<li><code>internal_note</code> — Multi-line text</li>
+					<li><code>billing_email</code> — Email</li>
+					<li><code>billing_address</code> — Single-line text</li>
+					<li><code>billing_address2</code> — Single-line text</li>
+					<li><code>billing_city</code> — Single-line text</li>
+					<li><code>billing_zip</code> — Single-line text</li>
+				</ul>
+				
+				<strong style="margin-top: 10px; font-size:12px;text-transform:uppercase;color:#2271b1;letter-spacing:.04em;"> Scopes Required in legacy app</strong>
+
+	<p> HubSpot → Development → Legacy apps → Create Legacy app → private → Give any name → Under scope choose the following scopes → click create app.</p>
+				<ul style="margin:4px 0 0 16px;font-size:13px;color:#50575e;">
+					<li><code>crm.objects.contacts.write</code> </li>
+					<li><code>crm.objects.companies.write</code></li>
+					<li><code>crm.objects.companies.read </code></li>
+					<li><code>crm.objects.deals.read</code></li>
+					<li><code>crm.objects.deals.write</code></li>
+					<li><code>crm.objects.contacts.read</code></li>
+				</ul>
+				
+			</div>
+			
         </form>
         <?php
     }
