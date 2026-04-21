@@ -87,17 +87,45 @@ class Sync_Manager {
             return;
         }
 
-        // 1. Find contact via _shipping_email
         // 1. Find or create contact via _shipping_email ONLY
-		$contact_id = $this->crm->find_contact( $data['contact_email'] );
+		//$contact_id = $this->crm->find_contact( $data['contact_email'] );
+		//
+		$contact_id = null;
+
+		if ( ! empty( $data['contact_email'] ) ) {
+			$contact_id = $this->crm->find_contact( $data['contact_email'] );
+		}
+
+		// Fallback: find contact via existing deal association
+		if ( ! $contact_id ) {
+			$existing_deal_id = $this->crm->find_deal_by_order_id( $data['order_id'] );
+			if ( $existing_deal_id ) {
+				$contact_id = $this->crm->get_contact_from_deal( $existing_deal_id );
+			}
+		}
+		
+		// Fallback: use billing phone if shipping phone is empty
+		$raw = trim( $data['shipping_phone'] ) ?: trim( $data['contact_phone'] );
+
+		// Strip all formatting characters (spaces, dashes, dots, parens)
+		$normalized = preg_replace( '/[^\d+]/', '', $raw );
+
+		if ( strpos( $normalized, '+' ) === 0 ) {
+			// Already has a country code, just stripped of spaces
+			$phone = $normalized;
+		} elseif ( $normalized !== '' ) {
+			// Swiss local → international
+			$phone = '+41' . ltrim( $normalized, '0' );
+		} else {
+			$phone = null; // truly no phone — array_filter will drop it
+		}
 
 		$contact_props = array_filter( [
 			'email'      => $data['contact_email'],
 			'firstname'  => $data['contact_first'],
-			'phone'      => $data['shipping_phone'], // shipping phone is the contact phone
+			'phone'      => $phone, // shipping phone is the contact phone
 			// Shipping address as contact address
-			'address'    => $data['shipping_address_1'],
-			'address2'   => $data['shipping_address_2'],
+			'address' => trim($data['shipping_address_1'] . ' ' . $data['shipping_address_2']),
 			'city'       => $data['shipping_city'],
 			'zip'        => $data['shipping_postcode'],
 			'state'      => $data['shipping_state'],

@@ -41,6 +41,8 @@ interface CRM_Adapter_Interface {
      */
     public function find_deal_by_order_id( int $order_id ): ?string;
 
+    public function get_contact_from_deal( string $deal_id ): ?string;
+
     /**
      * Create a deal; returns its CRM ID or null on failure.
      */

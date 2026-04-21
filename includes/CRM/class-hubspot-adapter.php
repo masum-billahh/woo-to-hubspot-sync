@@ -136,6 +136,14 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
         ] );
         return $res['results'][0]['id'] ?? null;
     }
+    
+    public function get_contact_from_deal( string $deal_id ): ?string {
+		$response = $this->api_get(
+			"crm/v3/objects/deals/{$deal_id}/associations/contacts"
+		);
+
+		return $response['results'][0]['id'] ?? null;
+	}
 
     public function create_deal( array $properties ): ?string {
         $res = $this->post( '/crm/v3/objects/deals', [

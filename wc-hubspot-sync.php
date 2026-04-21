@@ -3,7 +3,7 @@
  * Plugin Name: WooCommerce HubSpot Sync
  * Plugin URI:  https://www.upwork.com/freelancers/~01a6e65817b86d4589?mp_source=share
  * Description: Syncs WooCommerce orders to HubSpot CRM
- * Version:     1.3.0
+ * Version:     1.4.0
  * Author:      Masum Billah
  * Text Domain: wc-hubspot-sync
  * Requires at least: 6.0
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WC_HS_SYNC_VERSION', '1.3.0' );
+define( 'WC_HS_SYNC_VERSION', '1.4.0' );
 define( 'WC_HS_SYNC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WC_HS_SYNC_URL',  plugin_dir_url( __FILE__ ) );
 
