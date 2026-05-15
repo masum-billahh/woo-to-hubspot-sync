@@ -194,6 +194,7 @@ class Sync_Manager {
             'dealstage'       => $stage,
             'pipeline'        => Settings::get_pipeline(),
             'wc_order_id'     => (string) $data['order_id'],
+			'order_link'      => admin_url( 'admin.php?page=wc-orders&action=edit&id=' . $data['order_id'] ),
             'order_items'     => $data['order_text'],
             'closedate'       => $data['completed_timestamp'] ?? null,
             'createdate'      => $data['created_timestamp']   ?? null,
