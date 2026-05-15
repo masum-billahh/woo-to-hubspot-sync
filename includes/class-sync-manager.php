@@ -123,6 +123,7 @@ class Sync_Manager {
 		$contact_props = array_filter( [
 			'email'      => $data['contact_email'],
 			'firstname'  => $data['contact_first'],
+			'lastname'   => $data['contact_last'],
 			'phone'      => $phone, // shipping phone is the contact phone
 			// Shipping address as contact address
 			'address' => trim($data['shipping_address_1'] . ' ' . $data['shipping_address_2']),

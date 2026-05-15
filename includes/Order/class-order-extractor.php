@@ -59,7 +59,11 @@ class Order_Extractor {
         return [
             // Contact
             'contact_email'    => $shipping_email ?: $billing_email ?: $order->get_billing_email(),
-            'contact_first'    => $order->get_billing_first_name(),
+            'contact_first' => $order->get_shipping_first_name() ?: $order->get_billing_first_name(),
+			'contact_last'  => $order->get_shipping_first_name() 
+								? $order->get_shipping_last_name() 
+								: $order->get_billing_last_name(),
+			
             'contact_phone'    => $order->get_billing_phone(),
 
             // Billing email (only when different from shipping)
