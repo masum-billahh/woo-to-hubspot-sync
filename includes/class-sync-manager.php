@@ -199,7 +199,7 @@ class Sync_Manager {
             'order_items'     => $data['order_text'],
             'closedate'       => $data['completed_timestamp'] ?? null,
             'createdate'      => $data['created_timestamp']   ?? null,
-            'batch'           => $data['batch_number'] ?: null,
+            'production_batch' => $data['batch_number'] ?: null,
         ], fn( $v ) => $v !== null && $v !== '' );
 
         // 6. Upsert deal
