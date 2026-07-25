@@ -25,10 +25,12 @@ class Plugin {
         new Admin\Historical_Importer();
 
         // Order event hooks → Sync_Manager
-        $sync = new Sync_Manager(
-            new CRM\HubSpot_Adapter( Settings::get_token() ),
-            new Order\Order_Extractor()
-        );
+        $crm = new CRM\HubSpot_Adapter( Settings::get_token() );
+
+        $sync = new Sync_Manager( $crm, new Order\Order_Extractor() );
         $sync->register_hooks();
+
+        $ticket_webhook = new Webhook\Ticket_Webhook( $crm );
+        $ticket_webhook->register_hooks();
     }
 }

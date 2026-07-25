@@ -36,6 +36,10 @@ spl_autoload_register( function ( $class ) {
     if ( file_exists( $file ) ) require $file;
 } );
 
+register_activation_hook( __FILE__, function () {
+	flush_rewrite_rules();
+} );
+
 add_action( 'plugins_loaded', function () {
     if ( ! class_exists( 'WooCommerce' ) ) {
         add_action( 'admin_notices', function () {

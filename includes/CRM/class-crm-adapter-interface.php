@@ -72,4 +72,12 @@ interface CRM_Adapter_Interface {
      * Associate a deal with an owner (HubSpot user id).
      */
     public function set_deal_owner( string $deal_id, string $owner_id ): bool;
+    
+    /**
+     * Tickets
+     */
+    public function get_ticket_subject( string $ticket_id ): ?string;
+    public function ticket_has_deal_association( string $ticket_id ): bool;
+    public function associate_ticket_deal( string $ticket_id, string $deal_id ): bool;
+    public function add_ticket_note( string $ticket_id, string $note_body ): bool;
 }

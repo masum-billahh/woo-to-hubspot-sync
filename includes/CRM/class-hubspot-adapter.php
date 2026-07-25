@@ -188,6 +188,40 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
     public function set_deal_owner( string $deal_id, string $owner_id ): bool {
         return $this->update_deal( $deal_id, [ 'hubspot_owner_id' => $owner_id ] );
     }
+    
+    // ──────────────────────────────────────────────
+    // Tickets
+    // ──────────────────────────────────────────────
+
+    public function get_ticket_subject( string $ticket_id ): ?string {
+        $res = $this->get( "/crm/v3/objects/tickets/{$ticket_id}", [ 'properties' => 'subject' ] );
+        return $res['properties']['subject'] ?? null;
+    }
+
+    public function ticket_has_deal_association( string $ticket_id ): bool {
+        $res = $this->get( "/crm/v4/objects/tickets/{$ticket_id}/associations/deals" );
+        return ! empty( $res['results'] );
+    }
+
+    public function associate_ticket_deal( string $ticket_id, string $deal_id ): bool {
+        // Default (unlabeled) association — no request body needed.
+        $res = $this->request( 'PUT', "/crm/v4/objects/tickets/{$ticket_id}/associations/deals/{$deal_id}" );
+        return $res !== null;
+    }
+
+    public function add_ticket_note( string $ticket_id, string $note_body ): bool {
+        $res = $this->post( '/crm/v3/objects/notes', [
+            'properties'   => [
+                'hs_note_body' => $note_body,
+                'hs_timestamp' => (string) round( microtime( true ) * 1000 ),
+            ],
+            'associations' => [ [
+                'to'    => [ 'id' => $ticket_id ],
+                'types' => [ [ 'associationCategory' => 'HUBSPOT_DEFINED', 'associationTypeId' => 18 ] ],
+            ] ],
+        ] );
+        return ! empty( $res['id'] );
+    }
 
     // ──────────────────────────────────────────────
     // HTTP helpers

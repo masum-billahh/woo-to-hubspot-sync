@@ -20,6 +20,10 @@ class Settings {
         return (string) get_option( 'wc_hs_sync_notify_email', '' );
     }
     
+    public static function get_ticket_webhook_secret(): string {
+        return (string) get_option( 'wc_hs_sync_ticket_webhook_secret', 'repan4211' );
+    }
+    
     /**
      * Returns a map of WooCommerce status → HubSpot deal stage ID.
      * Editable via Settings UI.
