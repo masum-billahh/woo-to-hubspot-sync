@@ -204,8 +204,8 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
     }
 
     public function associate_ticket_deal( string $ticket_id, string $deal_id ): bool {
-        // Default (unlabeled) association — no request body needed.
-        $res = $this->request( 'PUT', "/crm/v4/objects/tickets/{$ticket_id}/associations/deals/{$deal_id}" );
+        // Default (unlabeled) association — this endpoint genuinely needs no body.
+        $res = $this->request( 'PUT', "/crm/v4/objects/tickets/{$ticket_id}/associations/default/deals/{$deal_id}" );
         return $res !== null;
     }
 
