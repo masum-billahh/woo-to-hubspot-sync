@@ -162,6 +162,15 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
         $res = $this->request( 'DELETE', "/crm/v3/objects/deals/{$deal_id}" );
         return $res === null || $res === true; // 204 No Content = success
     }
+    
+    // ──────────────────────────────────────────────
+    // Owners
+    // ──────────────────────────────────────────────
+ 
+    public function find_owner_by_email( string $email ): ?string {
+        $res = $this->get( '/crm/v3/owners', [ 'email' => $email, 'limit' => 1 ] );
+        return $res['results'][0]['id'] ?? null;
+    }
 
     // ──────────────────────────────────────────────
     // Associations
@@ -222,6 +231,63 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
         ] );
         return ! empty( $res['id'] );
     }
+    
+    public function find_ticket_by_notion_page( string $notion_page_id ): ?string {
+        $res = $this->post( '/crm/v3/objects/tickets/search', [
+            'filterGroups' => [ [
+                'filters' => [ [
+                    'propertyName' => 'notion_page_id',
+                    'operator'     => 'EQ',
+                    'value'        => $notion_page_id,
+                ] ],
+            ] ],
+            'properties' => [ 'notion_page_id' ],
+            'limit'      => 1,
+        ] );
+        return $res['results'][0]['id'] ?? null;
+    }
+
+    public function create_ticket( array $properties ): ?string {
+        $res = $this->post( '/crm/v3/objects/tickets', [ 'properties' => $properties ] );
+        return $res['id'] ?? null;
+    }
+
+    public function update_ticket( string $ticket_id, array $properties ): bool {
+        $res = $this->patch( "/crm/v3/objects/tickets/{$ticket_id}", [ 'properties' => $properties ] );
+        return ! empty( $res['id'] );
+    }
+
+    public function associate_ticket_contact( string $ticket_id, string $contact_id ): bool {
+        // typeId 16 = ticket→contact (HubSpot standard default)
+        $res = $this->put(
+            "/crm/v4/objects/tickets/{$ticket_id}/associations/contacts/{$contact_id}",
+            [ [ 'associationCategory' => 'HUBSPOT_DEFINED', 'associationTypeId' => 16 ] ]
+        );
+        return ! isset( $res['status'] ) || $res['status'] !== 'error';
+    }
+
+    public function associate_ticket_company( string $ticket_id, string $company_id ): bool {
+        // typeId 26 = ticket→company (HubSpot standard default)
+        $res = $this->put(
+            "/crm/v4/objects/tickets/{$ticket_id}/associations/companies/{$company_id}",
+            [ [ 'associationCategory' => 'HUBSPOT_DEFINED', 'associationTypeId' => 26 ] ]
+        );
+        return ! isset( $res['status'] ) || $res['status'] !== 'error';
+    }
+    
+    public function add_deal_note( string $deal_id, string $note_body ): bool {
+    $res = $this->post( '/crm/v3/objects/notes', [
+        'properties'   => [
+            'hs_note_body' => $note_body,
+            'hs_timestamp' => (string) round( microtime( true ) * 1000 ),
+        ],
+        'associations' => [ [
+            'to'    => [ 'id' => $deal_id ],
+            'types' => [ [ 'associationCategory' => 'HUBSPOT_DEFINED', 'associationTypeId' => 214 ] ],
+        ] ],
+    ] );
+    return ! empty( $res['id'] );
+}
 
     // ──────────────────────────────────────────────
     // HTTP helpers
@@ -241,13 +307,13 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
         return $this->decode( $res );
     }
 
-    private function post( string $path, array $body ): ?array {
+      private function post( string $path, array $body ): ?array {
         $res = wp_remote_post( $this->base . $path, [
             'headers' => $this->headers(),
             'body'    => wp_json_encode( $body ),
             'timeout' => 15,
         ] );
-        return $this->decode( $res );
+        return $this->decode( $res, " [{$path}] body=" . wp_json_encode( $body ) );
     }
 
     private function patch( string $path, array $body ): ?array {
@@ -267,13 +333,13 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
         if ( $body ) $args['body'] = wp_json_encode( $body );
 
         $res = wp_remote_request( $this->base . $path, $args );
-        return $this->decode( $res );
+        return $this->decode( $res, " [{$path}] body=" . wp_json_encode( $body ) );
     }
 
-    private function decode( $response ): ?array {
+    private function decode( $response, string $context = '' ): ?array {
         if ( is_wp_error( $response ) ) {
             wc_get_logger()->error(
-                '[HS Sync] HTTP error: ' . $response->get_error_message(),
+                "[HS Sync] HTTP error{$context}: " . $response->get_error_message(),
                 [ 'source' => 'hubspot-sync' ]
             );
             return null;
@@ -281,13 +347,13 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
         $code = wp_remote_retrieve_response_code( $response );
         $body = wp_remote_retrieve_body( $response );
 
-        if ( $code === 204 ) return []; // No Content — success with no body
+        if ( $code === 204 ) return [];
 
         $decoded = json_decode( $body, true );
 
         if ( $code >= 400 ) {
             wc_get_logger()->error(
-                "[HS Sync] API error {$code}: " . $body,
+                "[HS Sync] API error {$code}{$context}: " . $body,
                 [ 'source' => 'hubspot-sync' ]
             );
             return null;

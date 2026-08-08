@@ -32,5 +32,10 @@ class Plugin {
 
         $ticket_webhook = new Webhook\Ticket_Webhook( $crm );
         $ticket_webhook->register_hooks();
+        
+        $notion_client  = new Notion\Notion_Client( Settings::get_notion_token() );
+        $notion_webhook = new Webhook\Notion_Webhook( $crm, $notion_client );
+        $notion_webhook->register_hooks();
+        
     }
 }

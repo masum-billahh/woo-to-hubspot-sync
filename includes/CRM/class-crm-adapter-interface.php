@@ -80,4 +80,18 @@ interface CRM_Adapter_Interface {
     public function ticket_has_deal_association( string $ticket_id ): bool;
     public function associate_ticket_deal( string $ticket_id, string $deal_id ): bool;
     public function add_ticket_note( string $ticket_id, string $note_body ): bool;
+    
+    public function add_deal_note( string $deal_id, string $note_body ): bool;
+    
+    /**
+     * Find a HubSpot owner ID by their user email. Returns null if no match.
+     */
+    public function find_owner_by_email( string $email ): ?string;
+    
+    //Notion
+    public function find_ticket_by_notion_page( string $notion_page_id ): ?string;
+    public function create_ticket( array $properties ): ?string;
+    public function update_ticket( string $ticket_id, array $properties ): bool;
+    public function associate_ticket_contact( string $ticket_id, string $contact_id ): bool;
+    public function associate_ticket_company( string $ticket_id, string $company_id ): bool;
 }

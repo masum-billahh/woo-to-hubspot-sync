@@ -41,4 +41,20 @@ class Settings {
         $saved = get_option( 'wc_hs_sync_stage_map', [] );
         return wp_parse_args( $saved, $default );
     }
+    
+    public static function get_notion_token(): string {
+        return (string) get_option( 'wc_hs_sync_notion_token', '' );
+    }
+
+    public static function get_notion_webhook_secret(): string {
+        return (string) get_option( 'wc_hs_sync_notion_webhook_secret', '' );
+    }
+
+    public static function get_notion_ticket_pipeline(): string {
+        return (string) get_option( 'wc_hs_sync_notion_ticket_pipeline', '' );
+    }
+
+    public static function get_notion_ticket_stage(): string {
+        return (string) get_option( 'wc_hs_sync_notion_ticket_stage', '' );
+    }
 }

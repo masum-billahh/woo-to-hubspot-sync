@@ -113,6 +113,18 @@ class Ticket_Webhook {
             $this->log( 'error', "Ticket {$ticket_id}: association call failed for deal {$deal_id}." );
             return;
         }
+        
+        // Also associate the contact and their primary company, so tickets
+        // land fully linked regardless of what created them (Notion, email, etc.)
+        $contact_id = $this->crm->get_contact_from_deal( $deal_id );
+        if ( $contact_id ) {
+            $this->crm->associate_ticket_contact( $ticket_id, $contact_id );
+
+            $company = $this->crm->get_primary_company( $contact_id );
+            if ( $company ) {
+                $this->crm->associate_ticket_company( $ticket_id, $company['id'] );
+            }
+        }
 
         $this->crm->add_ticket_note( $ticket_id, "Auto-linked to Deal (#{$order_id})." );
         $this->log( 'info', "Ticket {$ticket_id}: associated with deal {$deal_id} for order #{$order_id}." );

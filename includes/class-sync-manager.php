@@ -31,6 +31,9 @@ class Sync_Manager {
         // HPOS deletion hook (and classic post deletion fallback)
         add_action( 'woocommerce_before_delete_order',          [ $this, 'handle_order_deleted' ] );
         add_action( 'before_delete_post',                       [ $this, 'handle_post_deleted'  ] );
+        add_action( 'woocommerce_email_sent',   [ $this, 'handle_email_sent' ], 10, 3 );
+        add_action( 'wc_hs_sync_log_email',     [ $this, 'handle_scheduled_email_note' ], 10, 3 );
+
     }
 
     // ──────────────────────────────────────────────
@@ -65,6 +68,38 @@ class Sync_Manager {
 		$this->log( 'info', "Action Scheduler running sync for order {$order_id}." );
 		$this->sync_order( $order_id );
 	}
+ 
+ public function handle_email_sent( $sent, string $email_id, \WC_Email $email ): void {
+    if ( ! $sent ) return;
+    if ( ! ( $email->object instanceof \WC_Order ) ) return; // skip non-order emails (reset pw, new account, etc.)
+
+    $order_id  = $email->object->get_id();
+    $label     = $email->get_title() ?: $email_id;
+    $recipient = $email->get_recipient();
+
+    if ( ! function_exists( 'as_schedule_single_action' ) ) {
+        $this->add_email_note( $order_id, $label, $recipient );
+        return;
+    }
+
+    // Delay slightly past the deal-sync delay (120s) so the deal already exists.
+    as_schedule_single_action( time() + 150, 'wc_hs_sync_log_email', [ $order_id, $label, $recipient ], 'wc-hs-sync' );
+}
+
+public function handle_scheduled_email_note( int $order_id, string $label, string $recipient ): void {
+    $this->add_email_note( $order_id, $label, $recipient );
+}
+
+private function add_email_note( int $order_id, string $label, string $recipient ): void {
+    $deal_id = $this->crm->find_deal_by_order_id( $order_id );
+    if ( ! $deal_id ) {
+        $this->log( 'error', "No HubSpot deal for order {$order_id} — couldn't log '{$label}' email note." );
+        return;
+    }
+    $note = sprintf( '"%s" email sent to %s', $label, $recipient );
+    $this->crm->add_deal_note( $deal_id, $note );
+    $this->log( 'info', "Logged email note on deal {$deal_id}: {$note}" );
+}
 
     public function handle_order_deleted( $order_id ): void {
         $this->delete_deal_for_order( (int) $order_id );
@@ -105,20 +140,8 @@ class Sync_Manager {
 		}
 		
 		// Fallback: use billing phone if shipping phone is empty
-		$raw = trim( $data['shipping_phone'] ) ?: trim( $data['contact_phone'] );
-
-		// Strip all formatting characters (spaces, dashes, dots, parens)
-		$normalized = preg_replace( '/[^\d+]/', '', $raw );
-
-		if ( strpos( $normalized, '+' ) === 0 ) {
-			// Already has a country code, just stripped of spaces
-			$phone = $normalized;
-		} elseif ( $normalized !== '' ) {
-			// Swiss local → international
-			$phone = '+41' . ltrim( $normalized, '0' );
-		} else {
-			$phone = null; // truly no phone — array_filter will drop it
-		}
+ 	    $raw   = trim( $data['shipping_phone'] ) ?: trim( $data['contact_phone'] );
+		$phone = $this->normalize_phone( $raw );
 
 		$contact_props = array_filter( [
 			'email'      => $data['contact_email'],
@@ -237,6 +260,8 @@ class Sync_Manager {
                 $this->crm->set_deal_owner( $deal_id, $company['owner_id'] );
             }
         }
+        
+        $this->sync_email_notes_from_order( $order_id, $deal_id );
 
         $this->log( 'info', "Sync complete for order {$order_id}." );
 		// Add order note
@@ -251,6 +276,85 @@ class Sync_Manager {
 		}
 		
     }
+    
+    private function sync_email_notes_from_order( int $order_id, string $deal_id ): void {
+    $order = wc_get_order( $order_id );
+    if ( ! $order || $order->get_meta( '_hs_email_notes_synced' ) ) return;
+
+    foreach ( wc_get_order_notes( [ 'order_id' => $order_id, 'type' => 'internal' ] ) as $note ) {
+        $content = $note->content;
+        $matched = null;
+
+        if ( preg_match( '/^(.+?)\s+sent to customer\s+(\S+@\S+)/i', $content, $m ) ) {
+            $matched = sprintf( '"%s" email sent to %s', trim( $m[1] ), $m[2] );
+        } elseif ( preg_match( '/versendet\s*\|\s*to:\s*(\S+@\S+)/i', $content, $m ) ) {
+            $matched = sprintf( 'Rechnungs-PDF sent to %s', $m[1] );
+        } elseif ( preg_match( '/^Sending\s+"(.+?)"\s+email\.?$/i', $content, $m ) ) {
+            $matched = sprintf( '"%s" email queued for sending', $m[1] );
+        }
+
+        if ( $matched ) {
+            $this->crm->add_deal_note( $deal_id, $matched );
+        }
+    }
+
+    $order->update_meta_data( '_hs_email_notes_synced', 'yes' );
+    $order->save();
+}
+    
+    /**
+ * Normalize a raw phone string into a valid Swiss E.164 number.
+ * Returns null if it can't be confidently normalized (logged for manual review).
+ */
+private function normalize_phone( string $raw ): ?string {
+    $raw = trim( $raw );
+    if ( $raw === '' ) {
+        return null;
+    }
+
+    // Some records have two numbers separated by "/", "," or ";" — use the first.
+    $parts = preg_split( '/[\/,;]/', $raw );
+    if ( count( $parts ) > 1 ) {
+        $this->log( 'warning', "Multiple phone numbers found in '{$raw}'; using first only." );
+    }
+    $raw = trim( $parts[0] );
+
+    // Strip everything except digits and a leading +
+    $digits = preg_replace( '/[^\d+]/', '', $raw );
+    if ( $digits === '' ) {
+        return null;
+    }
+
+    // "00" international prefix → "+"
+    if ( strpos( $digits, '00' ) === 0 ) {
+        $digits = '+' . substr( $digits, 2 );
+    }
+
+    if ( strpos( $digits, '+' ) === 0 ) {
+        $national = ltrim( substr( $digits, 1 ), '0' ); // strip stray 0 right after +
+        if ( strpos( $national, '41' ) === 0 ) {
+            $national = '41' . ltrim( substr( $national, 2 ), '0' );
+        }
+        $candidate = '+' . $national;
+    } elseif ( strpos( $digits, '41' ) === 0 && strlen( $digits ) === 11 ) {
+        // Already has country code, just missing "+"
+        $candidate = '+' . $digits;
+    } elseif ( strpos( $digits, '0' ) === 0 ) {
+        // Local Swiss format: 0XX XXX XX XX
+        $candidate = '+41' . ltrim( $digits, '0' );
+    } else {
+        // Bare 9-digit subscriber number, no leading 0
+        $candidate = '+41' . $digits;
+    }
+
+    // Final validation: +41 followed by exactly 9 digits, first digit 1–9
+    if ( ! preg_match( '/^\+41[1-9]\d{8}$/', $candidate ) ) {
+        $this->log( 'warning', "Could not confidently normalize phone '{$raw}' -> '{$candidate}'; skipping." );
+        return null;
+    }
+
+    return $candidate;
+}
 
     private function delete_deal_for_order( int $order_id ): void {
         $deal_id = $this->crm->find_deal_by_order_id( $order_id );

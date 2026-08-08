@@ -26,6 +26,12 @@ class Settings {
         register_setting( 'wc_hs_sync', 'wc_hs_sync_pipeline', [ 'sanitize_callback' => 'sanitize_text_field' ] );
         register_setting( 'wc_hs_sync', 'wc_hs_sync_notify_email', [ 'sanitize_callback' => 'sanitize_email' ] );
         register_setting( 'wc_hs_sync', 'wc_hs_sync_stage_map' );
+        
+        register_setting( 'wc_hs_sync', 'wc_hs_sync_notion_token', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'wc_hs_sync', 'wc_hs_sync_notion_webhook_secret', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'wc_hs_sync', 'wc_hs_sync_notion_ticket_pipeline', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'wc_hs_sync', 'wc_hs_sync_notion_ticket_stage', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        
     }
 
     public function render_page(): void {
@@ -133,6 +139,47 @@ class Settings {
                         <p class="description">Enter the HubSpot internal stage ID for each WooCommerce order status.</p>
                     </td>
                 </tr>
+                
+                <tr><th colspan="2"><h2 style="margin:20px 0 0;">Notion → HubSpot Ticket Sync</h2></th></tr>
+                <tr>
+                    <th>Notion Integration Token</th>
+                    <td>
+                        <input type="password" name="wc_hs_sync_notion_token"
+                               value="<?php echo esc_attr( get_option( 'wc_hs_sync_notion_token' ) ); ?>"
+                               class="regular-text" autocomplete="off" />
+                        <p class="description">From notion.so/my-integrations (Internal Integration).</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Notion Webhook Secret</th>
+                    <td>
+                        <input type="text" name="wc_hs_sync_notion_webhook_secret"
+                               value="<?php echo esc_attr( get_option( 'wc_hs_sync_notion_webhook_secret' ) ); ?>"
+                               class="regular-text" />
+                        <p class="description">
+                            Set this as the <code>key</code> query param on the webhook URL you give Notion:<br/>
+                            <code><?php echo esc_url( home_url( '/notion-tickets/' ) ); ?>?key=your-secret</code>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Production Tickets Pipeline ID</th>
+                    <td>
+                        <input type="text" name="wc_hs_sync_notion_ticket_pipeline"
+                               value="<?php echo esc_attr( get_option( 'wc_hs_sync_notion_ticket_pipeline' ) ); ?>"
+                               class="regular-text" />
+                    </td>
+                </tr>
+                <tr>
+                    <th>Default Ticket Stage ID</th>
+                    <td>
+                        <input type="text" name="wc_hs_sync_notion_ticket_stage"
+                               value="<?php echo esc_attr( get_option( 'wc_hs_sync_notion_ticket_stage' ) ); ?>"
+                               class="regular-text" />
+                        <p class="description">Stage new tickets land in (e.g. "Warten auf Produktion").</p>
+                    </td>
+                </tr>
+                
             </table>
             <?php submit_button(); ?>		
 						
@@ -179,6 +226,11 @@ class Settings {
 					<li><code>crm.objects.deals.write</code></li>
 					<li><code>crm.objects.contacts.read</code></li>
 				</ul>
+ 			
+  		<strong style="font-size:12px;text-transform:uppercase;color:#2271b1;letter-spacing:.04em;">Ticket Properties</strong>
+                <ul style="margin:4px 0 10px 16px;font-size:13px;color:#50575e;">
+                    <li><code>notion_page_id</code> — Single-line text (idempotency key, prevents duplicate tickets)</li>
+                </ul>
 				
 			</div>
 			
