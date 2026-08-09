@@ -92,6 +92,7 @@ interface CRM_Adapter_Interface {
     public function find_ticket_by_notion_page( string $notion_page_id ): ?string;
     public function create_ticket( array $properties ): ?string;
     public function update_ticket( string $ticket_id, array $properties ): bool;
+    public function delete_ticket( string $ticket_id ): bool;   // ← add this line
     public function associate_ticket_contact( string $ticket_id, string $contact_id ): bool;
     public function associate_ticket_company( string $ticket_id, string $company_id ): bool;
 }

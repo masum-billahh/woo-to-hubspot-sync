@@ -31,10 +31,14 @@ class Notion_Webhook {
         $this->logger = wc_get_logger();
     }
 
+    /** Retry delays (seconds) for a comment that arrives before its ticket exists. */
+    private const COMMENT_RETRY_DELAYS = [ 30, 90, 300 ]; // 30s, +90s, +5min
+
     public function register_hooks(): void {
         add_action( 'init', [ $this, 'add_rewrite_rule' ] );
         add_filter( 'query_vars', [ $this, 'add_query_var' ] );
         add_action( 'template_redirect', [ $this, 'maybe_handle_request' ] );
+        add_action( 'wc_hs_retry_notion_comment', [ $this, 'retry_sync_comment' ], 10, 3 );
     }
 
     public function add_rewrite_rule(): void {
@@ -84,6 +88,11 @@ class Notion_Webhook {
                 $comment_id = $payload['entity']['id'] ?? null;
                 $page_id    = $payload['data']['parent']['id'] ?? null;
                 if ( $comment_id && $page_id ) $this->sync_comment( $comment_id, $page_id );
+                break;
+
+            case 'page.deleted':
+                $page_id = $payload['entity']['id'] ?? null;
+                if ( $page_id ) $this->delete_ticket_for_page( $page_id );
                 break;
 
             default:
@@ -146,10 +155,16 @@ class Notion_Webhook {
             ( $order_id !== '' ? " (order #{$order_id})." : ' (no order number — created unlinked).' ) );
     }
 
-    private function sync_comment( string $comment_id, string $page_id ): void {
+    private function sync_comment( string $comment_id, string $page_id, int $attempt = 0 ): void {
         $ticket_id = $this->crm->find_ticket_by_notion_page( $page_id );
         if ( ! $ticket_id ) {
-            $this->log( 'info', "Comment {$comment_id}: no HubSpot ticket yet for Notion page {$page_id}, skipping." );
+            if ( isset( self::COMMENT_RETRY_DELAYS[ $attempt ] ) ) {
+                $delay = self::COMMENT_RETRY_DELAYS[ $attempt ];
+                $this->log( 'info', "Comment {$comment_id}: no HubSpot ticket yet for Notion page {$page_id}, retrying in {$delay}s (attempt " . ( $attempt + 1 ) . ')' );
+                wp_schedule_single_event( time() + $delay, 'wc_hs_retry_notion_comment', [ $comment_id, $page_id, $attempt + 1 ] );
+            } else {
+                $this->log( 'error', "Comment {$comment_id}: no HubSpot ticket for Notion page {$page_id} after " . count( self::COMMENT_RETRY_DELAYS ) . ' retries, giving up.' );
+            }
             return;
         }
 
@@ -174,6 +189,27 @@ class Notion_Webhook {
         } else {
             $this->log( 'error', "Comment {$comment_id}: failed to add note on ticket {$ticket_id}." );
         }
+    }
+
+    private function delete_ticket_for_page( string $page_id ): void {
+        // No need to hit the Notion API here — the page is already gone.
+        // find_ticket_by_notion_page searches HubSpot directly on the
+        // notion_page_id property we stamped onto the ticket at creation time.
+        $ticket_id = $this->crm->find_ticket_by_notion_page( $page_id );
+        if ( ! $ticket_id ) {
+            $this->log( 'info', "page.deleted for Notion page {$page_id}: no matching HubSpot ticket, nothing to do." );
+            return;
+        }
+
+        if ( $this->crm->delete_ticket( $ticket_id ) ) {
+            $this->log( 'info', "Deleted ticket {$ticket_id} for deleted Notion page {$page_id}." );
+        } else {
+            $this->log( 'error', "Failed deleting ticket {$ticket_id} for deleted Notion page {$page_id}." );
+        }
+    }
+
+    public function retry_sync_comment( string $comment_id, string $page_id, int $attempt ): void {
+        $this->sync_comment( $comment_id, $page_id, $attempt );
     }
 
     private function log( string $level, string $message ): void {

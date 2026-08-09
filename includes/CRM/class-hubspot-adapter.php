@@ -257,6 +257,11 @@ class HubSpot_Adapter implements CRM_Adapter_Interface {
         return ! empty( $res['id'] );
     }
 
+    public function delete_ticket( string $ticket_id ): bool {          // ← add this method
+        $res = $this->request( 'DELETE', "/crm/v3/objects/tickets/{$ticket_id}" );
+        return $res === null || $res === true; // 204 No Content = success
+    }
+
     public function associate_ticket_contact( string $ticket_id, string $contact_id ): bool {
         // typeId 16 = ticket→contact (HubSpot standard default)
         $res = $this->put(
